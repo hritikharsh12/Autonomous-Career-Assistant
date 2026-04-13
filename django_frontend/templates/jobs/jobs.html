@@ -1,0 +1,82 @@
+@"
+{% extends "base/base.html" %}
+{% block title %}Jobs - Career AI{% endblock %}
+{% block content %}
+<div class="page-title">&#128188; Job Search</div>
+<div class="page-sub">Search and rank 50+ live listings by semantic similarity to your profile</div>
+<div class="card" style="margin-bottom:1.5rem">
+  <div style="display:grid;grid-template-columns:1fr 1fr auto;gap:1rem;align-items:end">
+    <div><label>Job Title / Keywords</label><input id="queryInput" type="text" placeholder="e.g. ML Engineer, LangChain"></div>
+    <div><label>Location</label><input id="locationInput" type="text" placeholder="Remote, San Francisco..."></div>
+    <div style="display:flex;align-items:flex-end"><button class="btn btn-primary" onclick="searchJobs()" id="searchBtn">&#128269; Search</button></div>
+  </div>
+  <div style="margin-top:1rem">
+    <label>Your Profile / Resume Summary</label>
+    <textarea id="profileText" style="min-height:80px" placeholder="Paste a short summary of your skills..."></textarea>
+  </div>
+</div>
+<div id="emptyState" style="text-align:center;padding:3rem;color:var(--muted)">
+  <div style="font-size:3rem;margin-bottom:1rem">&#128269;</div>
+  <div>Enter a job title above and click Search</div>
+</div>
+<div id="loadingState" style="display:none;text-align:center;padding:3rem">
+  <div class="spinner" style="width:36px;height:36px;border-width:3px;margin:0 auto 1rem"></div>
+  <div style="color:var(--muted)" id="loadingMsg">Scraping job listings...</div>
+</div>
+<div id="jobGrid" style="display:none">
+  <div id="statsBar" style="margin-bottom:1rem;padding:1rem;background:var(--surface);border:1px solid var(--border);border-radius:12px;display:flex;gap:2rem;flex-wrap:wrap"></div>
+  <div id="jobCards" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:1rem"></div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+async function searchJobs() {
+  const query = document.getElementById("queryInput").value.trim();
+  const profile = document.getElementById("profileText").value.trim();
+  if(!query) return alert("Please enter a job title or keywords");
+  if(!profile) return alert("Please paste your profile text");
+  document.getElementById("emptyState").style.display = "none";
+  document.getElementById("jobGrid").style.display = "none";
+  document.getElementById("loadingState").style.display = "";
+  const btn = document.getElementById("searchBtn");
+  btn.disabled = true; btn.innerHTML = "<span class='spinner'></span> Searching...";
+  const msgs = ["Scraping RemoteOK...","Scraping ArbeitNow...","Scraping TheMuse...","Computing embeddings...","Ranking results..."];
+  let mi = 0;
+  const ticker = setInterval(() => { document.getElementById("loadingMsg").textContent = msgs[mi++ % msgs.length]; }, 2500);
+  try {
+    const data = await apiPost("/api/search-jobs/", {query:query, profile_text:profile, location:document.getElementById("locationInput").value.trim(), max_results:50});
+    clearInterval(ticker);
+    document.getElementById("loadingState").style.display = "none";
+    if(!data.success) throw new Error(data.detail || "Search failed");
+    const r = data.results;
+    const jobs = r.jobs || [];
+    const avg = jobs.length ? Math.round(jobs.reduce((s,j)=>s+j.similarity,0)/jobs.length) : 0;
+    document.getElementById("statsBar").innerHTML =
+      "<span style='font-family:var(--mono);color:var(--accent)'>" + (r.total_scraped||0) + "</span><span style='color:var(--muted);font-size:.82rem;margin-left:.3rem'>scraped</span>" +
+      "<span style='font-family:var(--mono);color:var(--green);margin-left:1rem'>" + (r.total_ranked||0) + "</span><span style='color:var(--muted);font-size:.82rem;margin-left:.3rem'>matched</span>" +
+      "<span style='font-family:var(--mono);color:var(--yellow);margin-left:1rem'>" + (r.elapsed_seconds||0) + "s</span><span style='color:var(--muted);font-size:.82rem;margin-left:.3rem'>elapsed</span>" +
+      "<span style='font-family:var(--mono);margin-left:1rem'>" + avg + "%</span><span style='color:var(--muted);font-size:.82rem;margin-left:.3rem'>avg similarity</span>";
+    document.getElementById("jobCards").innerHTML = jobs.length ? jobs.map(j => {
+      const c = j.similarity>=70?"var(--green)":j.similarity>=40?"var(--yellow)":"var(--red)";
+      return "<div class='job-card' onclick=\"window.open('" + j.url + "','_blank')\" style='cursor:pointer'>" +
+        "<div style='display:flex;gap:.75rem;align-items:flex-start;margin-bottom:.75rem'>" +
+        "<div style='width:48px;height:48px;border-radius:50%;border:2px solid " + c + ";display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:.72rem;font-weight:700;color:" + c + ";flex-shrink:0'>" + j.similarity + "%</div>" +
+        "<div><div style='font-weight:600'>" + j.title + "</div><div style='color:var(--muted);font-size:.82rem'>" + j.company + "</div>" +
+        "<div style='color:var(--muted);font-size:.78rem'>&#128205; " + (j.location||"Not specified") + "</div></div></div>" +
+        "<div style='font-size:.82rem;color:var(--muted);line-height:1.6'>" + (j.description||"").slice(0,200) + "...</div>" +
+        "<div style='margin-top:.75rem;font-size:.78rem;color:var(--accent)'>View Job &#8594;</div></div>";
+    }).join("") : "<div style='text-align:center;color:var(--muted);padding:2rem;grid-column:1/-1'>No jobs matched. Try a different query.</div>";
+    document.getElementById("jobGrid").style.display = "";
+  } catch(e) {
+    clearInterval(ticker);
+    document.getElementById("loadingState").style.display = "none";
+    document.getElementById("emptyState").style.display = "";
+    document.getElementById("emptyState").innerHTML = "<div style='color:var(--red)'>Error: " + e.message + "</div>";
+  } finally { btn.disabled = false; btn.innerHTML = "&#128269; Search"; }
+}
+document.addEventListener("DOMContentLoaded", () => {
+  document.getElementById("queryInput").addEventListener("keydown", e => { if(e.key==="Enter") searchJobs(); });
+});
+</script>
+{% endblock %}
+"@ | Out-File -FilePath "C:\Users\hriti\career_assistant\django_frontend\templates\jobs\jobs.html" -Encoding utf8

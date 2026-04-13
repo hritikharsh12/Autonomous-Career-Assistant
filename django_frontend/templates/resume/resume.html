@@ -1,0 +1,138 @@
+@"
+{% extends "base/base.html" %}
+{% block title %}Resume Optimizer - Career AI{% endblock %}
+{% block content %}
+<div class="page-title">&#128196; Resume Optimizer</div>
+<div class="page-sub">Upload your resume, paste a job description, and get an ATS-optimized version instantly</div>
+<div class="card" style="margin-bottom:1.5rem">
+  <div style="display:flex;gap:1rem;align-items:center;flex-wrap:wrap">
+    <label style="cursor:pointer;margin:0">
+      <input type="file" id="resumeFile" accept=".pdf,.docx,.txt" style="display:none">
+      <span class="btn btn-outline">&#128206; Upload Resume</span>
+    </label>
+    <span id="fileStatus" style="font-size:.82rem;color:var(--muted)">No file selected</span>
+    <button class="btn btn-primary" onclick="runATS()" id="atsBtn" style="margin-left:auto">&#127919; Optimize Resume</button>
+    <button class="btn btn-outline" onclick="copyEnhanced()" id="copyBtn" style="display:none">&#128203; Copy Enhanced</button>
+  </div>
+</div>
+<div class="grid-2" style="gap:1.5rem;margin-bottom:1.5rem">
+  <div style="display:flex;flex-direction:column;gap:1.5rem">
+    <div class="card">
+      <div class="card-title">&#128196; Original Resume</div>
+      <textarea id="resumeText" style="min-height:300px" placeholder="Paste your resume here or upload above..."></textarea>
+    </div>
+    <div class="card">
+      <div class="card-title">&#128203; Job Description</div>
+      <textarea id="jobDesc" style="min-height:180px" placeholder="Paste the job description you are applying to..."></textarea>
+    </div>
+  </div>
+  <div style="display:flex;flex-direction:column;gap:1.5rem">
+    <div class="card" id="scorePanel" style="display:none">
+      <div class="card-title">&#9889; ATS Score</div>
+      <div style="display:flex;gap:1.5rem;align-items:center;margin-bottom:1rem">
+        <div style="text-align:center">
+          <div style="font-size:2.5rem;font-weight:700;font-family:var(--mono)" id="beforeScore">-</div>
+          <div style="font-size:.75rem;color:var(--muted)">Before</div>
+        </div>
+        <div style="font-size:1.5rem;color:var(--muted)">&#8594;</div>
+        <div style="text-align:center">
+          <div style="font-size:2.5rem;font-weight:700;font-family:var(--mono);color:var(--green)" id="afterScore">-</div>
+          <div style="font-size:.75rem;color:var(--muted)">After</div>
+        </div>
+        <div style="flex:1">
+          <div style="font-family:var(--mono);font-size:1.1rem;font-weight:700;color:var(--green)" id="improvement">+0%</div>
+          <div style="font-size:.75rem;color:var(--muted)" id="semSimLabel"></div>
+        </div>
+      </div>
+      <div id="categoryBreakdown" style="display:flex;flex-direction:column;gap:.5rem"></div>
+    </div>
+    <div class="card" id="enhancedPanel" style="display:none">
+      <div class="card-title">&#10024; ATS-Enhanced Resume</div>
+      <div id="enhancedContent" style="font-family:var(--mono);font-size:.8rem;line-height:1.8;white-space:pre-wrap;color:var(--text);max-height:380px;overflow-y:auto"></div>
+    </div>
+    <div class="card" id="gapsPanel" style="display:none">
+      <div class="card-title">&#127919; Skill Gaps</div>
+      <div id="gapsList" style="display:flex;flex-direction:column;gap:.7rem"></div>
+    </div>
+  </div>
+</div>
+<div class="card" id="feedbackPanel" style="display:none">
+  <div class="card-title">&#129302; AI Feedback</div>
+  <div id="llmFeedback" style="white-space:pre-wrap;font-size:.85rem;line-height:1.8;color:var(--text)"></div>
+</div>
+<div id="loadingOverlay" style="display:none;text-align:center;padding:3rem">
+  <div class="spinner" style="width:40px;height:40px;border-width:3px;margin:0 auto 1rem"></div>
+  <div id="loadMsg" style="color:var(--muted)">Analyzing resume...</div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+let enhancedText = "";
+let beforeATSScore = 0;
+document.getElementById("resumeFile").addEventListener("change", async function() {
+  const file = this.files[0]; if(!file) return;
+  document.getElementById("fileStatus").textContent = "Uploading...";
+  const fd = new FormData(); fd.append("file", file); fd.append("user_id","default");
+  const r = await fetch("/api/upload-resume/",{method:"POST",body:fd,headers:{"X-CSRFToken":csrfToken}});
+  const d = await r.json();
+  if(d.success){ document.getElementById("resumeText").value = d.resume_text; document.getElementById("fileStatus").textContent = "Parsed: " + file.name; }
+  else { document.getElementById("fileStatus").textContent = "Upload failed"; }
+});
+async function runATS() {
+  const resumeText = document.getElementById("resumeText").value.trim();
+  const jobDesc = document.getElementById("jobDesc").value.trim();
+  if(!resumeText) return alert("Please paste or upload your resume");
+  if(!jobDesc) return alert("Please paste the job description");
+  const btn = document.getElementById("atsBtn");
+  btn.disabled = true; btn.innerHTML = "<span class='spinner'></span> Optimizing...";
+  ["scorePanel","enhancedPanel","gapsPanel","feedbackPanel"].forEach(id => document.getElementById(id).style.display = "none");
+  document.getElementById("loadingOverlay").style.display = "";
+  const msgs = ["Computing ATS score...","Retrieving achievements...","Rewriting resume...","Generating AI feedback..."];
+  let mi = 0;
+  const ticker = setInterval(() => { document.getElementById("loadMsg").textContent = msgs[mi++ % msgs.length]; }, 3000);
+  try {
+    const quick = await apiPost("/api/quick-score/", {resume_text:resumeText, job_description:jobDesc});
+    if(quick.success){ beforeATSScore = quick.score.overall_ats_score; document.getElementById("beforeScore").textContent = beforeATSScore + "%"; }
+    const full = await apiPost("/api/ats-feedback/", {resume_text:resumeText, job_description:jobDesc});
+    clearInterval(ticker);
+    document.getElementById("loadingOverlay").style.display = "none";
+    if(!full.success) throw new Error(full.detail || "Analysis failed");
+    const r = full.report;
+    const after = r.ats_scores?.overall_ats_score || 0;
+    document.getElementById("afterScore").textContent = after + "%";
+    document.getElementById("improvement").textContent = "+" + Math.max(0,after-beforeATSScore) + "%";
+    document.getElementById("semSimLabel").textContent = "Semantic: " + (r.semantic_similarity||0) + "%";
+    if(r.ats_scores?.category_scores){
+      document.getElementById("categoryBreakdown").innerHTML = Object.entries(r.ats_scores.category_scores).slice(0,6).map(([cat,data]) =>
+        "<div><div style='display:flex;justify-content:space-between;margin-bottom:.2rem'><span style='font-size:.78rem;color:var(--muted)'>" + cat.replace(/_/g," ") + "</span><span style='font-size:.78rem;font-family:var(--mono)'>" + data.score + "%</span></div>" +
+        "<div class='progress-wrap' style='height:5px'><div class='progress-bar " + progressColor(data.score) + "' style='width:" + data.score + "%'></div></div></div>"
+      ).join("");
+    }
+    document.getElementById("scorePanel").style.display = "";
+    enhancedText = r.enhanced_resume || "";
+    if(enhancedText){ document.getElementById("enhancedContent").textContent = enhancedText; document.getElementById("enhancedPanel").style.display = ""; document.getElementById("copyBtn").style.display = ""; }
+    if(r.skill_gaps?.length){
+      document.getElementById("gapsList").innerHTML = r.skill_gaps.map(g =>
+        "<div style='background:var(--surface2);border-radius:10px;padding:.9rem'><div style='display:flex;justify-content:space-between;align-items:center;margin-bottom:.4rem'><span style='font-size:.85rem;font-weight:500'>" + g.category.replace(/_/g," ") + "</span><span class='badge " + (g.priority==="HIGH"?"badge-red":"badge-yellow") + "'>" + g.priority + "</span></div>" +
+        "<div class='progress-wrap' style='margin-bottom:.4rem'><div class='progress-bar " + progressColor(g.current_score) + "' style='width:" + g.current_score + "%'></div></div>" +
+        "<div style='font-size:.75rem;color:var(--muted)'>Add: <span style='color:var(--yellow)'>" + (g.missing_keywords||[]).slice(0,6).join(", ") + "</span></div></div>"
+      ).join("");
+      document.getElementById("gapsPanel").style.display = "";
+    }
+    if(r.llm_feedback){ document.getElementById("llmFeedback").textContent = r.llm_feedback; document.getElementById("feedbackPanel").style.display = ""; }
+  } catch(e) {
+    clearInterval(ticker);
+    document.getElementById("loadingOverlay").style.display = "none";
+    alert("Error: " + e.message);
+  } finally { btn.disabled = false; btn.innerHTML = "&#127919; Optimize Resume"; }
+}
+function copyEnhanced() {
+  navigator.clipboard.writeText(enhancedText).then(() => {
+    const btn = document.getElementById("copyBtn");
+    btn.innerHTML = "Copied!";
+    setTimeout(() => { btn.innerHTML = "&#128203; Copy Enhanced"; }, 2000);
+  });
+}
+</script>
+{% endblock %}
+"@ | Out-File -FilePath "C:\Users\hriti\career_assistant\django_frontend\templates\resume\resume.html" -Encoding utf8

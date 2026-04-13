@@ -1,0 +1,206 @@
+{% extends "base/base.html" %}
+{% block title %}Dashboard — Career AI{% endblock %}
+
+{% block content %}
+<div class="page-title">🚀 Career Assistant</div>
+<div class="page-sub">Paste your resume and job query — the AI handles the rest</div>
+
+<div class="grid-2" style="margin-bottom:1.5rem">
+  <!-- Left: Inputs -->
+  <div style="display:flex;flex-direction:column;gap:1.5rem">
+
+    <div class="card">
+      <div class="card-title">📄 Resume</div>
+      <label>Paste your resume text <em style="color:var(--muted)">(or upload below)</em></label>
+      <textarea id="resumeText" placeholder="Paste your full resume here..."></textarea>
+      <div style="margin-top:0.75rem;display:flex;gap:0.75rem;align-items:center">
+        <label style="margin:0;cursor:pointer">
+          <input type="file" id="resumeFile" accept=".pdf,.docx,.txt" style="display:none">
+          <span class="btn btn-outline">📎 Upload File</span>
+        </label>
+        <span id="uploadStatus" style="font-size:0.8rem;color:var(--muted)"></span>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">🔍 Job Search</div>
+      <div style="display:flex;flex-direction:column;gap:1rem">
+        <div>
+          <label>Job title / keywords</label>
+          <input id="jobQuery" type="text" placeholder="e.g. Machine Learning Engineer, LangChain Developer">
+        </div>
+        <div>
+          <label>Location <em style="color:var(--muted)">(optional)</em></label>
+          <input id="location" type="text" placeholder="e.g. San Francisco, Remote">
+        </div>
+      </div>
+    </div>
+
+    <button class="btn btn-primary" id="runBtn" onclick="runAnalysis()" style="width:100%;justify-content:center;padding:0.85rem">
+      ⚡ Run Full Analysis
+    </button>
+  </div>
+
+  <!-- Right: Live score -->
+  <div style="display:flex;flex-direction:column;gap:1.5rem">
+
+    <div class="card" id="quickScoreCard" style="display:none">
+      <div class="card-title">⚡ Quick ATS Score</div>
+      <div style="text-align:center;padding:1rem 0">
+        <div style="font-size:3rem;font-weight:700;font-family:var(--mono)" id="atsScoreNum">—</div>
+        <div style="color:var(--muted);font-size:0.85rem">ATS Match</div>
+        <div style="margin-top:0.5rem">
+          <span id="semSim" style="font-size:0.9rem;color:var(--green)"></span>
+        </div>
+      </div>
+      <div class="progress-wrap">
+        <div class="progress-bar" id="atsProgressBar" style="width:0%"></div>
+      </div>
+    </div>
+
+    <div class="card" id="statusCard">
+      <div class="card-title">📊 Pipeline Status</div>
+      <div id="statusLog" style="font-family:var(--mono);font-size:0.8rem;color:var(--muted);line-height:2">
+        Waiting to start...
+      </div>
+    </div>
+
+    <div class="card" id="topJobsCard" style="display:none">
+      <div class="card-title">💼 Top Matched Jobs</div>
+      <div id="topJobsList" style="display:flex;flex-direction:column;gap:0.75rem"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Full Report -->
+<div id="reportSection" style="display:none">
+  <hr>
+  <div class="page-title" style="font-size:1.2rem;margin-bottom:1rem">📋 Full Report</div>
+  <div class="grid-2" style="gap:1.5rem">
+
+    <div class="card">
+      <div class="card-title">🎯 Skill Gap Analysis</div>
+      <div id="skillGapList" style="display:flex;flex-direction:column;gap:0.75rem"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">🤖 AI Feedback</div>
+      <pre id="llmFeedback" style="white-space:pre-wrap;font-size:0.82rem;line-height:1.7;color:var(--text);font-family:var(--font)"></pre>
+    </div>
+
+    <div class="card" style="grid-column:1/-1">
+      <div class="card-title">✨ Enhanced Resume</div>
+      <pre id="enhancedResume" style="white-space:pre-wrap;font-size:0.82rem;line-height:1.7;font-family:var(--mono);color:var(--text)"></pre>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Auto-upload file when selected
+document.getElementById('resumeFile').addEventListener('change', async function() {
+  const file = this.files[0];
+  if (!file) return;
+  document.getElementById('uploadStatus').textContent = 'Uploading...';
+  const fd = new FormData();
+  fd.append('file', file);
+  fd.append('user_id', 'default');
+  const r = await fetch('/api/upload-resume/', { method:'POST', body:fd, headers:{'X-CSRFToken': csrfToken} });
+  const d = await r.json();
+  if (d.success) {
+    document.getElementById('resumeText').value = d.resume_text;
+    document.getElementById('uploadStatus').textContent = `✓ Parsed (${d.n_achievements} achievements)`;
+  } else {
+    document.getElementById('uploadStatus').textContent = '✗ Upload failed';
+  }
+});
+
+function log(msg) {
+  const el = document.getElementById('statusLog');
+  el.innerHTML += `<div>▸ ${msg}</div>`;
+}
+
+async function runAnalysis() {
+  const resumeText = document.getElementById('resumeText').value.trim();
+  const jobQuery   = document.getElementById('jobQuery').value.trim();
+  const location   = document.getElementById('location').value.trim();
+
+  if (!resumeText) return alert('Please paste or upload your resume first.');
+  if (!jobQuery)   return alert('Please enter a job query.');
+
+  const btn = document.getElementById('runBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Running pipeline...';
+  document.getElementById('statusLog').innerHTML = '';
+  document.getElementById('reportSection').style.display = 'none';
+
+  log('Ingesting resume into vector store...');
+  log('Scraping 50+ live job listings...');
+  log('Running semantic similarity matching...');
+  log('Analyzing ATS keyword gaps...');
+  log('Generating LLM feedback...');
+
+  try {
+    const data = await apiPost('/api/analyze/', { resume_text: resumeText, job_query: jobQuery, location });
+    const r = data.report;
+
+    // Quick score
+    const ats = r.summary?.ats_score || 0;
+    const sim = r.summary?.semantic_similarity || 0;
+    document.getElementById('atsScoreNum').textContent = ats + '%';
+    document.getElementById('semSim').textContent = `Semantic Match: ${sim}%`;
+    const bar = document.getElementById('atsProgressBar');
+    bar.style.width = ats + '%';
+    bar.className = 'progress-bar ' + progressColor(ats);
+    document.getElementById('quickScoreCard').style.display = '';
+
+    log(`✓ Done in ${r.summary?.loop_iterations || 1} feedback loop(s)`);
+    log(`ATS Score: ${ats}%  |  Semantic Similarity: ${sim}%`);
+    log(`Jobs found: ${r.summary?.jobs_found || 0}`);
+
+    // Top jobs
+    if (r.top_jobs?.length) {
+      const list = document.getElementById('topJobsList');
+      list.innerHTML = r.top_jobs.slice(0,5).map(j => `
+        <div class="job-card">
+          <div class="job-title">${j.title}</div>
+          <div class="job-company">${j.company} · ${j.location}</div>
+          <div style="margin-top:0.4rem;display:flex;gap:0.5rem;align-items:center">
+            <span class="job-sim">⬡ ${j.similarity}% match</span>
+            <a href="${j.url}" target="_blank" style="font-size:0.78rem;color:var(--accent);text-decoration:none">View →</a>
+          </div>
+        </div>`).join('');
+      document.getElementById('topJobsCard').style.display = '';
+    }
+
+    // Skill gaps
+    if (r.skill_gaps?.length) {
+      document.getElementById('skillGapList').innerHTML = r.skill_gaps.slice(0,8).map(g => `
+        <div>
+          <div style="display:flex;justify-content:space-between;margin-bottom:0.3rem">
+            <span style="font-size:0.85rem;font-weight:500">${g.category.replace(/_/g,' ')}</span>
+            <span class="badge ${scoreBadge(g.current_score)}">${g.current_score}%</span>
+          </div>
+          <div class="progress-wrap"><div class="progress-bar ${progressColor(g.current_score)}" style="width:${g.current_score}%"></div></div>
+          <div style="font-size:0.75rem;color:var(--muted);margin-top:0.25rem">Missing: ${g.missing_keywords?.slice(0,5).join(', ')}</div>
+        </div>`).join('');
+    }
+
+    // LLM feedback
+    document.getElementById('llmFeedback').textContent = r.llm_feedback || 'N/A';
+
+    // Enhanced resume
+    document.getElementById('enhancedResume').textContent = r.enhanced_resume || 'N/A';
+
+    document.getElementById('reportSection').style.display = '';
+
+  } catch(e) {
+    log('✗ Error: ' + e.message);
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '⚡ Run Full Analysis';
+  }
+}
+</script>
+{% endblock %}

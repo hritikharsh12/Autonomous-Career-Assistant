@@ -1,0 +1,37 @@
+# ── LLM & Embeddings ──────────────────────────────────────────────────────────
+langchain==0.3.25
+langchain-community==0.3.23
+langchain-huggingface==0.1.2
+langgraph==0.4.1
+huggingface-hub==0.30.2
+sentence-transformers==4.1.0
+
+# ── Vector Store ──────────────────────────────────────────────────────────────
+chromadb
+
+# ── Document Processing ───────────────────────────────────────────────────────
+pypdf==5.4.0
+python-docx==1.1.2
+pdfplumber==0.11.6
+
+# ── Web Scraping ──────────────────────────────────────────────────────────────
+playwright==1.51.0
+beautifulsoup4==4.13.3
+httpx==0.28.1
+fake-useragent==2.1.0
+
+# ── FastAPI Backend ───────────────────────────────────────────────────────────
+fastapi==0.115.12
+uvicorn[standard]==0.34.0
+python-multipart==0.0.20
+pydantic==2.11.3
+
+# ── Django Frontend ───────────────────────────────────────────────────────────
+django==5.2
+requests==2.32.3
+
+# ── Utilities ─────────────────────────────────────────────────────────────────
+python-dotenv==1.1.0
+numpy
+scikit-learn==1.6.1
+tqdm==4.67.1

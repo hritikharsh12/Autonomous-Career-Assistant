@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{% block title %}Career Assistant{% endblock %}</title>
+{% load static %}
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:       #0a0c10;
+  --surface:  #111318;
+  --surface2: #1a1d26;
+  --border:   #232635;
+  --accent:   #6366f1;
+  --accent2:  #8b5cf6;
+  --green:    #10b981;
+  --yellow:   #f59e0b;
+  --red:      #ef4444;
+  --text:     #e2e4f0;
+  --muted:    #6b7280;
+  --font:     'Space Grotesk', sans-serif;
+  --mono:     'JetBrains Mono', monospace;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: var(--font); background: var(--bg); color: var(--text); min-height: 100vh; display: flex; flex-direction: column; }
+
+/* ── Nav ── */
+nav { background: var(--surface); border-bottom: 1px solid var(--border); padding: 0 2rem; display: flex; align-items: center; height: 60px; gap: 2rem; position: sticky; top: 0; z-index: 100; }
+.nav-brand { font-size: 1.1rem; font-weight: 700; color: var(--accent); letter-spacing: 0.05em; text-decoration: none; display: flex; align-items: center; gap: 0.4rem; }
+.nav-brand span { color: var(--text); }
+.nav-links { display: flex; gap: 0.25rem; margin-left: auto; }
+.nav-links a { color: var(--muted); text-decoration: none; padding: 0.4rem 0.9rem; border-radius: 8px; font-size: 0.88rem; font-weight: 500; transition: all 0.15s; }
+.nav-links a:hover, .nav-links a.active { background: var(--surface2); color: var(--text); }
+
+/* ── Layout ── */
+main { flex: 1; padding: 2rem; max-width: 1200px; margin: 0 auto; width: 100%; }
+.page-title { font-size: 1.6rem; font-weight: 700; margin-bottom: 0.4rem; }
+.page-sub   { color: var(--muted); font-size: 0.9rem; margin-bottom: 2rem; }
+
+/* ── Cards ── */
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 1.5rem; }
+.card-title { font-size: 0.95rem; font-weight: 600; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem; }
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+.grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; }
+
+/* ── Form elements ── */
+label { display: block; font-size: 0.82rem; color: var(--muted); margin-bottom: 0.4rem; font-weight: 500; }
+input, textarea, select {
+  width: 100%; background: var(--surface2); border: 1px solid var(--border);
+  border-radius: 10px; color: var(--text); font-family: var(--font); font-size: 0.9rem;
+  padding: 0.65rem 1rem; outline: none; transition: border-color 0.15s;
+}
+textarea { resize: vertical; min-height: 140px; font-family: var(--mono); font-size: 0.82rem; }
+input:focus, textarea:focus { border-color: var(--accent); }
+
+/* ── Buttons ── */
+.btn { display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.6rem 1.4rem; border-radius: 10px; font-family: var(--font); font-size: 0.88rem; font-weight: 600; cursor: pointer; border: none; transition: all 0.15s; text-decoration: none; }
+.btn-primary { background: var(--accent); color: #fff; }
+.btn-primary:hover { background: var(--accent2); }
+.btn-outline { background: transparent; border: 1px solid var(--border); color: var(--text); }
+.btn-outline:hover { border-color: var(--accent); color: var(--accent); }
+.btn-green { background: var(--green); color: #fff; }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* ── Score badges ── */
+.badge { display: inline-block; padding: 0.2rem 0.65rem; border-radius: 6px; font-size: 0.75rem; font-weight: 600; }
+.badge-green  { background: rgba(16,185,129,0.15); color: var(--green); }
+.badge-yellow { background: rgba(245,158,11,0.15); color: var(--yellow); }
+.badge-red    { background: rgba(239,68,68,0.15);  color: var(--red); }
+
+/* ── Progress bar ── */
+.progress-wrap { background: var(--surface2); border-radius: 99px; height: 8px; overflow: hidden; }
+.progress-bar  { height: 100%; border-radius: 99px; transition: width 0.6s ease; }
+.progress-green  { background: var(--green); }
+.progress-yellow { background: var(--yellow); }
+.progress-red    { background: var(--red); }
+
+/* ── Spinner ── */
+.spinner { display: inline-block; width: 18px; height: 18px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.7s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── Alerts ── */
+.alert { padding: 0.75rem 1rem; border-radius: 10px; font-size: 0.88rem; margin-bottom: 1rem; }
+.alert-error   { background: rgba(239,68,68,0.1);  border: 1px solid rgba(239,68,68,0.3);  color: #fca5a5; }
+.alert-success { background: rgba(16,185,129,0.1); border: 1px solid rgba(16,185,129,0.3); color: #6ee7b7; }
+
+/* ── Divider ── */
+hr { border: none; border-top: 1px solid var(--border); margin: 1.5rem 0; }
+
+/* ── Job card ── */
+.job-card { background: var(--surface2); border: 1px solid var(--border); border-radius: 12px; padding: 1.2rem; transition: border-color 0.15s; }
+.job-card:hover { border-color: var(--accent); }
+.job-title   { font-size: 1rem; font-weight: 600; margin-bottom: 0.3rem; }
+.job-company { font-size: 0.85rem; color: var(--muted); }
+.job-sim     { font-family: var(--mono); font-size: 0.8rem; color: var(--green); font-weight: 600; }
+
+/* ── Responsive ── */
+@media(max-width: 768px) { .grid-2, .grid-3 { grid-template-columns: 1fr; } }
+</style>
+{% block extra_head %}{% endblock %}
+</head>
+<body>
+<nav>
+  <a class="nav-brand" href="/">⬡ Career<span>AI</span></a>
+  <div class="nav-links">
+    <a href="/"          {% if request.path == '/' %}class="active"{% endif %}>Home</a>
+    <a href="/dashboard/" {% if '/dashboard' in request.path %}class="active"{% endif %}>Dashboard</a>
+    <a href="/jobs/"      {% if '/jobs' in request.path %}class="active"{% endif %}>Jobs</a>
+    <a href="/resume/"    {% if '/resume' in request.path %}class="active"{% endif %}>Resume</a>
+  </div>
+</nav>
+<main>
+{% block content %}{% endblock %}
+</main>
+<script>
+// Global CSRF helper
+const csrfToken = '{{ csrf_token }}';
+async function apiPost(url, data) {
+  const r = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
+    body: JSON.stringify(data),
+  });
+  return r.json();
+}
+function scoreBadge(score) {
+  if (score >= 70) return 'badge-green';
+  if (score >= 40) return 'badge-yellow';
+  return 'badge-red';
+}
+function progressColor(score) {
+  if (score >= 70) return 'progress-green';
+  if (score >= 40) return 'progress-yellow';
+  return 'progress-red';
+}
+</script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

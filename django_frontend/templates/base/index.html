@@ -1,0 +1,49 @@
+{% extends "base/base.html" %}
+{% block title %}Career AI — Autonomous Career Assistant{% endblock %}
+
+{% block content %}
+<div style="text-align:center;padding:4rem 0 3rem">
+  <div style="font-size:3rem;font-weight:700;line-height:1.2;margin-bottom:1rem">
+    Your Autonomous<br><span style="color:var(--accent)">Career Assistant</span>
+  </div>
+  <div style="color:var(--muted);font-size:1rem;max-width:520px;margin:0 auto 2.5rem">
+    Powered by LangGraph + HuggingFace. Matches your profile to jobs with 85% semantic similarity,
+    optimizes your resume for ATS, and scrapes 50+ live listings in under 30 seconds.
+  </div>
+  <a href="/dashboard/" class="btn btn-primary" style="font-size:1rem;padding:0.85rem 2rem">
+    🚀 Start Now
+  </a>
+</div>
+
+<div class="grid-3" style="margin-bottom:3rem">
+  <div class="card">
+    <div style="font-size:2rem;margin-bottom:0.75rem">⚡</div>
+    <div style="font-weight:600;margin-bottom:0.4rem">RAG Pipeline</div>
+    <div style="font-size:0.85rem;color:var(--muted)">Injects your achievements into resumes, improving ATS keyword density by ~40%</div>
+  </div>
+  <div class="card">
+    <div style="font-size:2rem;margin-bottom:0.75rem">🎯</div>
+    <div style="font-weight:600;margin-bottom:0.4rem">85% Semantic Match</div>
+    <div style="font-size:0.85rem;color:var(--muted)">ChromaDB + HuggingFace embeddings match your profile to the right jobs</div>
+  </div>
+  <div class="card">
+    <div style="font-size:2rem;margin-bottom:0.75rem">🕷️</div>
+    <div style="font-weight:600;margin-bottom:0.4rem">50+ Jobs in 30s</div>
+    <div style="font-size:0.85rem;color:var(--muted)">Async web scraping across multiple job boards, ranked by relevance</div>
+  </div>
+</div>
+
+<div class="card" style="max-width:600px;margin:0 auto">
+  <div class="card-title">📊 Vector Store Stats</div>
+  <div class="grid-2">
+    <div style="text-align:center;padding:0.5rem">
+      <div style="font-size:2rem;font-weight:700;font-family:var(--mono);color:var(--accent)">{{ stats.resume_chunks|default:"0" }}</div>
+      <div style="font-size:0.82rem;color:var(--muted)">Resume Chunks Stored</div>
+    </div>
+    <div style="text-align:center;padding:0.5rem">
+      <div style="font-size:2rem;font-weight:700;font-family:var(--mono);color:var(--green)">{{ stats.job_chunks|default:"0" }}</div>
+      <div style="font-size:0.82rem;color:var(--muted)">Job Chunks Indexed</div>
+    </div>
+  </div>
+</div>
+{% endblock %}
